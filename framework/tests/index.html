@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Framework tests</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      .pass { color: #1a7f37; }
+      .fail { color: #cf222e; white-space: pre-wrap; }
+      #sandbox { position: absolute; left: -9999px; }
+    </style>
+  </head>
+  <body>
+    <h1>Framework tests</h1>
+    <p id="summary">Running…</p>
+    <ol id="results"></ol>
+    <div id="sandbox"></div>
+    <script type="module">
+      import { run } from './harness.js'
+      import './renderer.test.js'
+      // TODO(B): import './events.test.js', './store.test.js', './forms.test.js'
+      // TODO(C): import './router.test.js', './http.test.js'
+
+      const results = await run()
+      const list = document.getElementById('results')
+      for (const r of results) {
+        const li = document.createElement('li')
+        li.className = r.ok ? 'pass' : 'fail'
+        li.textContent = r.ok ? `✔ ${r.name}` : `✘ ${r.name}\n   ${r.error}`
+        list.appendChild(li)
+      }
+      const failed = results.filter((r) => !r.ok).length
+      document.getElementById('summary').textContent =
+        `${results.length - failed} passed, ${failed} failed`
+      window.__testResults = results
+    </script>
+  </body>
+</html>

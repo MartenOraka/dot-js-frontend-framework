@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Performance demo: VirtualList</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 900px; }
+      .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+      .list { border: 1px solid #d0d7de; border-radius: 6px; }
+      .row { padding: 0 .75rem; line-height: 32px; border-bottom: 1px solid #eee; }
+      table { border-collapse: collapse; margin: 1rem 0; }
+      td, th { border: 1px solid #d0d7de; padding: .3rem .75rem; text-align: left; }
+      button { margin-right: .5rem; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { h, defineComponent, createApp, nextTick, VirtualList } from '../src/index.js'
+
+      const COUNT = 10000
+      const ITEM_HEIGHT = 33
+      const items = Array.from({ length: COUNT }, (_, i) => ({ id: i, label: `Row #${i}` }))
+      const row = (item) => h('div', { class: 'row' }, item.label)
+      const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()))
+
+      const Demo = defineComponent({
+        name: 'PerformanceDemo',
+        state: () => ({ mode: null, results: {} }),
+
+        render({ state, setState }) {
+          async function run(mode) {
+            setState({ mode: null })
+            await nextTick()
+            const start = performance.now()
+            setState({ mode })
+            await nextTick() // framework has rendered
+            await nextFrame() // browser has done layout and paint
+            const ms = Math.round(performance.now() - start)
+            const nodes = document.querySelectorAll('#app .row').length
+            setState((s) => ({ results: { ...s.results, [mode]: { ms, nodes } } }))
+          }
+
+          const result = (mode) => state.results[mode]
+          let list = h('p', 'Pick a mode above.')
+          if (state.mode === 'plain') {
+            list = h('div', { class: 'list', style: { height: '400px', overflowY: 'auto' } },
+              items.map((item) => h('div', { key: item.id, style: { height: `${ITEM_HEIGHT}px` } }, row(item))))
+          } else if (state.mode === 'virtual') {
+            list = h(VirtualList, { class: 'list', items, itemHeight: ITEM_HEIGHT, height: 400,
+              renderItem: row, getKey: (item) => item.id })
+          }
+
+          return h('main', null,
+            h('h1', `Rendering ${COUNT.toLocaleString()} rows`),
+            h('p', 'Both modes show the same list. The plain list creates every row; VirtualList only creates the rows in view and swaps them while you scroll. Open DevTools → Performance to compare scrolling too.'),
+            h('button', { on: { click: () => run('plain') } }, 'Plain list'),
+            h('button', { on: { click: () => run('virtual') } }, 'VirtualList'),
+            h('table', null,
+              h('tr', null, h('th', 'Mode'), h('th', 'Time to first paint'), h('th', 'Row elements in DOM')),
+              ['plain', 'virtual'].map((mode) =>
+                h('tr', { key: mode },
+                  h('td', mode === 'plain' ? 'Plain list' : 'VirtualList'),
+                  h('td', result(mode) ? `${result(mode).ms} ms` : '—'),
+                  h('td', result(mode) ? result(mode).nodes.toLocaleString() : '—')))),
+            list,
+          )
+        },
+      })
+
+      createApp({ root: '#app', component: Demo }).mount()
+    </script>
+  </body>
+</html>

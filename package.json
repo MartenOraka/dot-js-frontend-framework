@@ -1,0 +1,10 @@
+{
+  "name": "dot-js-frontend-framework",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A small front-end framework built from scratch, plus an example app.",
+  "scripts": {
+    "dev": "node example/server.js"
+  }
+}

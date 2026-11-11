@@ -1,0 +1,19 @@
+/* Owner: Person C. Placeholder styles for the example app. */
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  line-height: 1.5;
+  color: #1f2328;
+  background: #f6f8fa;
+}
+#app {
+  max-width: 720px;
+  margin: 2rem auto;
+  padding: 0 1rem;
+}
+nav a {
+  margin-right: 1rem;
+}
