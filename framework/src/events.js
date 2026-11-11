@@ -1,26 +1,15 @@
-// Owner: Person B
-//
-// >>> STUB written by Person A so the renderer can run. <<<
-// Person B replaces this file with the real implementation:
-//   - delegation: one real listener per event type on the root (init),
-//     a WeakMap from element to handlers, walk up from event.target
-//   - modifiers: .prevent .stop .once .self
-//   - non-bubbling events (focus, blur, mouseenter, scroll, ...)
-//
-// Keep these four exports and their signatures exactly; the renderer
-// (render.js, app.js) calls them. See docs/api-contract.md.
-//
-// Developers write:   on: { click: fn, 'submit.prevent': fn }
-// Handlers receive:   (event, el)  where el is the element the handler is on
+// Person B (stub for now)
+// TODO: delegation, modifiers, non-bubbling events.
+// Keep these 4 functions, the renderer calls them. Handlers get (event, el).
 
-const attached = new WeakMap() // element -> [{ name, listener }]
+const attached = new WeakMap() // element -> listeners
 
-/** Called once by createApp with the app's root element. */
+// Once, on the app root.
 export function init(_rootEl) {
-  // Stub: nothing to do, listeners are attached directly to each element.
+  // Stub: nothing to do.
 }
 
-/** Called when an element with an `on` prop is mounted. */
+// Element mounted.
 export function attach(el, on) {
   const list = []
   for (const spec of Object.keys(on)) {
@@ -39,13 +28,13 @@ export function attach(el, on) {
   attached.set(el, list)
 }
 
-/** Called on every patch of an element that has (or had) an `on` prop. */
+// Element patched.
 export function update(el, _oldOn, newOn) {
   detach(el)
   if (Object.keys(newOn).length) attach(el, newOn)
 }
 
-/** Called for every element in a subtree that is being removed. */
+// Element removed.
 export function detach(el) {
   const list = attached.get(el)
   if (!list) return

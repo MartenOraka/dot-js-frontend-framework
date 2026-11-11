@@ -1,21 +1,6 @@
-// Owner: Person A
-//
-// Reusable components. A component is described once with defineComponent()
-// and used any number of times with h(MyComponent, props).
-//
-//   const Counter = defineComponent({
-//     name: 'Counter',
-//     state: (props) => ({ count: props.start ?? 0 }),
-//     render({ props, state, setState, store, router }) {
-//       return h('button', { on: { click: () => setState({ count: state.count + 1 }) } },
-//         `${props.label}: ${state.count}`)
-//     },
-//     onMount({ el }) {},     // after the component's DOM is in the page
-//     onUnmount() {},         // before it is removed
-//   })
-//
-// Plain functions also work as components without local state:
-//   const Hello = ({ props }) => h('p', `Hello ${props.name}`)
+// Person A
+// defineComponent({ state, render, onMount, onUnmount })
+// Plain functions work too: ({ props }) => h('p', props.name)
 
 import { toVNode } from './vdom.js'
 import { mount, patch, unmount, firstNode } from './render.js'
@@ -31,16 +16,11 @@ export function defineComponent(options) {
   return { name: 'Component', ...options, __isComponent: true }
 }
 
-// The component currently mounting or rendering. Used to give every
-// instance a depth (parents are updated before their children).
+// Component being rendered right now (used for depth).
 let current = null
 
 export class ComponentInstance {
-  /**
-   * @param {object} def    component definition from defineComponent()
-   * @param {object} props  props passed via h(Component, props)
-   * @param {object} app    shared context: { store, router }
-   */
+  // def: from defineComponent, app: { store, router }
   constructor(def, props, app = {}) {
     this.def = def
     this.props = props
@@ -53,7 +33,7 @@ export class ComponentInstance {
     this.setState = this.setState.bind(this)
   }
 
-  /** Merge a partial state (or the result of fn(state, props)) and re-render. */
+  // Merge state and re-render.
   setState(partial) {
     const next = typeof partial === 'function' ? partial(this.state, this.props) : partial
     if (next == null) return
@@ -64,7 +44,7 @@ export class ComponentInstance {
     }
   }
 
-  /** The object every render function and hook receives. */
+  // What render() and hooks receive.
   context() {
     return {
       props: this.props,
@@ -100,7 +80,7 @@ export class ComponentInstance {
     if (this.def.onMount) queueMountHook(() => this.mounted && this.def.onMount(this.context()))
   }
 
-  /** Re-render and patch the DOM. Called by the scheduler or by a parent. */
+  // Re-render and update the DOM.
   update() {
     if (!this.mounted) return
     this.dirty = false
@@ -117,7 +97,7 @@ export class ComponentInstance {
     }
   }
 
-  /** A parent re-rendered and passed new props. */
+  // Parent passed new props.
   updateProps(props) {
     this.props = props
     this.update()

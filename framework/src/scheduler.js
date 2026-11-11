@@ -1,10 +1,5 @@
-// Owner: Person A
-//
-// Batches re-renders. Calling setState ten times in one click handler must
-// not render ten times, so updates are queued and run together once, right
-// before the browser paints the next frame (requestAnimationFrame).
-//
-// It also runs onMount hooks after the DOM has been inserted into the page.
+// Person A
+// Batches updates into one render per frame and runs onMount hooks.
 
 const raf =
   typeof requestAnimationFrame === 'function'
@@ -13,19 +8,15 @@ const raf =
 
 const queue = new Set()
 let scheduled = false
-let waiting = [] // resolve functions from nextTick()
+let waiting = [] // nextTick() promises
 
-/**
- * Queue a job to run before the next frame. A job is anything with
- * `depth` (number), `dirty` (boolean) and `update()`; in practice it is a
- * component instance. Queuing the same job twice runs it once.
- */
+// Queue a component to re-render before the next frame.
 export function scheduleUpdate(job) {
   queue.add(job)
   requestFlush()
 }
 
-/** Resolves after pending updates have been rendered. Handy in tests. */
+// Resolves after pending updates have rendered.
 export function nextTick() {
   return new Promise((resolve) => {
     waiting.push(resolve)
@@ -40,11 +31,10 @@ function requestFlush() {
   }
 }
 
-/** Run all queued updates now. Normally called by the scheduler itself. */
+// Run all queued updates.
 export function flush() {
   scheduled = false
-  // Parents first: re-rendering a parent also re-renders its children,
-  // which clears their `dirty` flag so they are not rendered twice.
+  // Parents first, so children don't render twice.
   const jobs = [...queue].sort((a, b) => a.depth - b.depth)
   queue.clear()
   for (const job of jobs) {
@@ -56,9 +46,7 @@ export function flush() {
   resolvers.forEach((resolve) => resolve())
 }
 
-// ---------------------------------------------------------------------------
-// onMount hooks run after the whole tree is in the document, not while it is
-// still being built, so components can measure elements or focus inputs.
+// onMount hooks run once the DOM is in the page.
 
 const mountHooks = []
 

@@ -1,12 +1,11 @@
-// Owner: Person A. Tests for vdom.js, render.js, component.js, app.js,
-// scheduler.js and virtual-list.js.
+// Person A: renderer tests
 
 import { test, assert, assertEqual, sandbox } from './harness.js'
 import {
   h, fragment, render, defineComponent, createApp, createStore, nextTick, VirtualList,
 } from '../src/index.js'
 
-// --- h() and mounting -------------------------------------------------------
+// --- h() and mounting ---
 
 test('h() creates elements, text and nested children', () => {
   const root = sandbox()
@@ -56,7 +55,7 @@ test('value and checked are DOM properties', () => {
   render(h('input', { value: 'b' }), root)
   assertEqual(input.value, 'b')
   render(h('input', { type: 'checkbox', checked: true }), root)
-  // type changed attribute only; same element is reused
+  // same element is reused
   assert(root.firstChild.checked, 'should be checked')
 })
 
@@ -81,7 +80,7 @@ test('ref receives the element and null on unmount', () => {
   assertEqual(ref.current, null)
 })
 
-// --- events (through events.js) ----------------------------------------------
+// --- events (through events.js) ---
 
 test('on: listeners are attached, updated and removed', () => {
   const root = sandbox()
@@ -104,7 +103,7 @@ test('.prevent modifier prevents default', () => {
   assertEqual(prevented, true)
 })
 
-// --- patching -------------------------------------------------------------------
+// --- patching ---
 
 test('patch reuses elements and updates text', () => {
   const root = sandbox()
@@ -151,13 +150,13 @@ test('fragments render siblings without a wrapper and patch correctly', () => {
   assertEqual(root.firstChild.innerHTML, '<i>start</i><b>1</b><b>2</b><b>3</b><i>end</i>')
 })
 
-// --- components ------------------------------------------------------------------
+// --- components ---
 
 const Counter = defineComponent({
   name: 'Counter',
   state: (props) => ({ count: props.start || 0 }),
   render({ props, state, setState }) {
-    // Function form: two clicks before the next render must both count.
+    // Function form, so two quick clicks both count.
     return h('button', { on: { click: () => setState((s) => ({ count: s.count + 1 })) } }, `${props.label}:${state.count}`)
   },
 })
@@ -221,7 +220,7 @@ test('keyed components are moved, not re-created', async () => {
   assertEqual(root.textContent, 'c:1a:0b:0')
 })
 
-// --- createApp ------------------------------------------------------------------
+// --- createApp ---
 
 test('createApp renders the root component and re-renders on store changes', async () => {
   const root = sandbox()
@@ -237,7 +236,7 @@ test('createApp renders the root component and re-renders on store changes', asy
   assertEqual(root.innerHTML, '')
 })
 
-// --- VirtualList ------------------------------------------------------------------
+// --- VirtualList ---
 
 test('VirtualList only renders visible rows and follows scrolling', async () => {
   const root = sandbox()

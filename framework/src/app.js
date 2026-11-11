@@ -1,13 +1,6 @@
-// Owner: Person A
-//
-// createApp() is the entry point of every application. The developer
-// describes the app (root element, components or routes, store) and the
-// framework takes control: it renders, listens for state and URL changes,
-// and re-renders. The developer's code is called by the framework, not the
-// other way round. That is what makes this a framework rather than a library.
-//
-//   createApp({ root: '#app', routes, store }).mount()
-//   createApp({ root: '#app', component: App, store }).mount()
+// Person A
+// createApp({ root, routes or component, store }).mount()
+// The framework calls your code and re-renders on changes.
 
 import { h } from './vdom.js'
 import { defineComponent, ComponentInstance } from './component.js'
@@ -16,7 +9,7 @@ import * as events from './events.js'
 import { createStore } from './store.js'
 import { createRouter } from './router.js'
 
-/** Renders the component that matches the current URL. */
+// Shows the page for the current URL.
 export const RouterView = defineComponent({
   name: 'RouterView',
   render({ router }) {
@@ -27,14 +20,7 @@ export const RouterView = defineComponent({
   },
 })
 
-/**
- * @param {object} options
- * @param {string|Element} options.root    CSS selector or element to render into
- * @param {object} [options.component]     root component (when not using routes)
- * @param {object} [options.routes]        { '/path/:id': Component, '*': NotFound }
- * @param {object} [options.store]         store from createStore(); one is made if omitted
- * @param {object} [options.routerOptions] extra options for createRouter (e.g. mode)
- */
+// options: root, component or routes, store, routerOptions
 export function createApp(options = {}) {
   const { root, component, routes, routerOptions = {} } = options
   if (!root) throw new Error('createApp(): "root" is required')
@@ -66,8 +52,7 @@ export function createApp(options = {}) {
       instance.mount(rootEl, null)
       flushMountHooks()
 
-      // Any store change (including route changes, which the router writes
-      // into the store) re-renders the app once, before the next frame.
+      // Re-render on any store change (route changes too).
       unsubscribe = store.subscribe(() => {
         instance.dirty = true
         scheduleUpdate(instance)

@@ -1,13 +1,6 @@
-// Owner: Person A
-//
-// The renderer. Three operations:
-//   mount(vnode, parentEl, anchor)  create real DOM for a vnode and insert it
-//   patch(oldVNode, newVNode, ...)  update the existing DOM to match newVNode
-//   unmount(vnode)                  remove DOM, listeners and components
-//
-// Event listeners are NOT handled here. The renderer passes each element's
-// `on` prop to events.js (Person B), using the four functions agreed in
-// docs/api-contract.md: init, attach, update, detach.
+// Person A
+// mount: vnode -> DOM, patch: update DOM, unmount: remove.
+// Listeners are handled by events.js (Person B).
 
 import { TEXT, ELEMENT, FRAGMENT, COMPONENT, isVNode } from './vdom.js'
 import { ComponentInstance } from './component.js'
@@ -16,13 +9,10 @@ import * as events from './events.js'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-// Props that must be set as DOM properties, not HTML attributes, or inputs
-// stop updating once the user has typed into them.
+// Set as DOM properties so inputs stay in sync.
 const DOM_PROPS = new Set(['value', 'checked', 'selected', 'indeterminate', 'muted'])
 
-// ---------------------------------------------------------------------------
-// Public helper: render a vnode tree into a container without createApp.
-// Calling it again with a new tree patches the previous one.
+// render(vnode, container): use without createApp.
 
 const rendered = new WeakMap() // container -> last vnode
 const initialisedRoots = new WeakSet()
@@ -45,13 +35,9 @@ export function render(vnode, container, appContext = {}) {
   flushMountHooks()
 }
 
-// ---------------------------------------------------------------------------
-// Mount
+// --- Mount ---
 
-/**
- * Create the DOM for `vnode` and insert it into `parentEl` before `anchor`
- * (or at the end when `anchor` is null).
- */
+// Create DOM for vnode, insert before anchor.
 export function mount(vnode, parentEl, anchor, app) {
   switch (vnode.type) {
     case TEXT: {
@@ -63,7 +49,7 @@ export function mount(vnode, parentEl, anchor, app) {
       const el = createElement(vnode.tag, parentEl)
       vnode.el = el
       for (const child of vnode.children) mount(child, el, null, app)
-      // Props after children, so <select value="b"> finds its <option>s.
+      // Props after children so <select value> works.
       setProps(el, {}, vnode.props)
       parentEl.insertBefore(el, anchor)
       if (vnode.props.on) events.attach(el, vnode.props.on)
@@ -92,14 +78,9 @@ function createElement(tag, parentEl) {
   return inSvg ? document.createElementNS(SVG_NS, tag) : document.createElement(tag)
 }
 
-// ---------------------------------------------------------------------------
-// Unmount
+// --- Unmount ---
 
-/**
- * Remove a vnode. Calls events.detach for every element in the subtree and
- * onUnmount for every component. Only the top-most DOM nodes are actually
- * removed from the page (`remove`), their descendants go with them.
- */
+// Remove a vnode, its listeners and components.
 export function unmount(vnode, remove = true) {
   switch (vnode.type) {
     case TEXT:
@@ -120,19 +101,18 @@ export function unmount(vnode, remove = true) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Patch
+// --- Patch ---
 
 function sameNode(a, b) {
   return a.type === b.type && a.tag === b.tag && a.key === b.key
 }
 
-/** Update the DOM created for `oldV` so that it matches `newV`. */
+// Update oldV's DOM to match newV.
 export function patch(oldV, newV, parentEl, app) {
   if (oldV === newV) return
 
   if (!sameNode(oldV, newV)) {
-    // Different kind of node: build the new one in place of the old one.
+    // Different node: replace it.
     mount(newV, parentEl, firstNode(oldV), app)
     unmount(oldV)
     return
@@ -172,13 +152,7 @@ export function patch(oldV, newV, parentEl, app) {
   }
 }
 
-/**
- * Patch a list of children. Children with a `key` are matched by key, the
- * rest are matched by their position among the unkeyed children. Matched
- * nodes are patched and moved if needed, new ones are mounted, leftovers
- * are unmounted. Keys let the renderer move existing DOM nodes instead of
- * re-creating them when a list is reordered.
- */
+// Update a list of children: keyed ones match by key, the rest by position.
 function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   const oldByKey = new Map()
   const oldUnkeyed = []
@@ -192,7 +166,7 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   const matches = new Array(newCh.length).fill(null)
   let unkeyedIndex = 0
 
-  // 1. Find the old node each new node can reuse, and patch it.
+  // 1. Match and patch.
   newCh.forEach((child, i) => {
     let match = null
     if (child.key != null) {
@@ -211,11 +185,10 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
     }
   })
 
-  // 2. Remove old nodes nobody reused.
+  // 2. Remove unused old nodes.
   for (const child of oldCh) if (!used.has(child)) unmount(child)
 
-  // 3. Put everything in order, walking backwards so each node can be
-  //    inserted before the node that follows it.
+  // 3. Put nodes in order (backwards).
   let anchor = endAnchor
   for (let i = newCh.length - 1; i >= 0; i--) {
     const child = newCh[i]
@@ -230,8 +203,7 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Props, attributes and styles
+// --- Props, class and style ---
 
 function setProps(el, oldProps, newProps) {
   for (const name in oldProps) {
@@ -245,7 +217,7 @@ function setProps(el, oldProps, newProps) {
   }
 }
 
-// Handled elsewhere (events.js, setRef) or not real attributes.
+// Not real attributes.
 function isSpecial(name) {
   return name === 'on' || name === 'ref' || name === 'key' || name === 'children'
 }
@@ -258,7 +230,7 @@ function setProp(el, name, oldValue, value) {
   } else if (name === 'style') {
     setStyle(el, oldValue, value)
   } else if (DOM_PROPS.has(name)) {
-    // Compare with the live DOM value: the user may have typed since.
+    // Compare with the live value (user may have typed).
     const next = name === 'value' ? (value == null ? '' : String(value)) : Boolean(value)
     if (el[name] !== next) el[name] = next
   } else if (value == null || value === false) {
@@ -270,10 +242,7 @@ function setProp(el, name, oldValue, value) {
   }
 }
 
-/**
- * class can be a string, an array or an object:
- *   'btn primary'  |  ['btn', isActive && 'active']  |  { btn: true, active: isActive }
- */
+// class: string, array or object
 export function classString(value) {
   if (!value) return ''
   if (typeof value === 'string') return value
@@ -286,10 +255,7 @@ export function classString(value) {
   return String(value)
 }
 
-/**
- * style can be a string or an object. Object keys are camelCase
- * (backgroundColor) or CSS custom properties (--accent).
- */
+// style: string or object
 function setStyle(el, oldStyle, newStyle) {
   if (typeof newStyle === 'string' || newStyle == null) {
     el.style.cssText = newStyle || ''
@@ -317,9 +283,7 @@ function setRef(ref, el) {
   else if (typeof ref === 'object') ref.current = el
 }
 
-// ---------------------------------------------------------------------------
-// Helpers to find the DOM nodes owned by any vnode (components and
-// fragments can own several, or own them through a child).
+// --- DOM nodes owned by a vnode ---
 
 export function domNodes(vnode) {
   switch (vnode.type) {

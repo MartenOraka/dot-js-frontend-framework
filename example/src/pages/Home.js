@@ -1,4 +1,4 @@
-// Owner: Person C. Placeholder page.
+// Person C (placeholder)
 import { h, defineComponent } from '/framework/src/index.js'
 
 export const Home = defineComponent({

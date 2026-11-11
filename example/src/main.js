@@ -1,6 +1,4 @@
-// Owner: Person C
-// Entry point of the example app. This is a placeholder that proves the
-// framework boots; Person C replaces the pages with the real app.
+// Person C: example app entry (placeholder).
 
 import { createApp } from '/framework/src/index.js'
 import { store } from './store.js'
@@ -8,5 +6,5 @@ import { routes } from './routes.js'
 
 const app = createApp({ root: '#app', routes, store }).mount()
 
-// Exposed for debugging in the browser console.
+// For debugging in the console.
 window.app = app

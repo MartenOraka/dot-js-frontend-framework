@@ -1,13 +1,5 @@
-// Development server (no dependencies). Run from the repo root:
-//   npm run dev        or        node example/server.js
-//
-// Serves:
-//   /framework/...  -> files from ../framework (source, playground, tests)
-//   /...            -> files from ./ (the example app)
-//   anything else   -> example/index.html, so history-mode routes like
-//                      /todo/3 still work after a page reload
-//
-// TODO(C): add mock API routes under /api/ for the example app if needed.
+// Dev server: npm run dev
+// /framework/* -> framework folder, everything else -> example app.
 
 import http from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
@@ -53,7 +45,7 @@ const server = http.createServer(async (req, res) => {
     ? await tryFile(safeJoin(FRAMEWORK_DIR, urlPath.slice('/framework'.length)))
     : await tryFile(safeJoin(EXAMPLE_DIR, urlPath))
 
-  // SPA fallback: unknown paths without a file extension get the app.
+  // Unknown paths get index.html (for routes).
   if (!file && !extname(urlPath)) file = join(EXAMPLE_DIR, 'index.html')
 
   if (!file) {

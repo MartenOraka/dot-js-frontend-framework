@@ -1,21 +1,7 @@
-// Owner: Person C
-//
-// >>> STUB written by Person A so createApp({ routes }) can run. <<<
-// Person C replaces this with the real router. createApp relies on this
-// API (see docs/api-contract.md):
-//
-//   const router = createRouter({ routes, store })
-//   router.start()                      // read the URL, listen for back/forward
-//   router.stop()
-//   router.navigate('/todo/3')          // push a new URL
-//   router.navigate('/', { replace: true })
-//   router.resolve()                    // -> { component, params, path } | null
-//
-// The router writes the current route into the store under the reserved
-// key `route`: { path, params, query }. That store change is what makes
-// the app re-render on navigation.
-//
-// TODO(C): hash mode, query parsing, Link component, guards, base path.
+// Person C (stub for now)
+// createRouter({ routes, store }): start, stop, navigate, resolve.
+// Writes { path, params, query } to store.route.
+// TODO: Link, hash mode, query parsing.
 
 export function createRouter({ routes, store }) {
   const table = Object.entries(routes)

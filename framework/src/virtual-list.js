@@ -1,18 +1,6 @@
-// Owner: Person A
-//
-// Performance feature: a list that only creates DOM elements for the rows
-// you can see (plus a few extra above and below). A list of 10 000 items
-// creates about 30 elements instead of 10 000, so it mounts fast and
-// scrolls smoothly. See docs/performance.md and playground/performance.html.
-//
-//   h(VirtualList, {
-//     items: bigArray,
-//     itemHeight: 32,                  // every row must have the same height (px)
-//     height: 400,                     // visible height of the list (px)
-//     renderItem: (item, index) => h('span', item.name),
-//     getKey: (item) => item.id,       // optional, defaults to the index
-//     overscan: 5,                     // optional, extra rows above and below
-//   })
+// Person A
+// Only renders the rows in view: 10 000 items -> about 20 elements.
+// h(VirtualList, { items, itemHeight, height, renderItem, getKey, overscan })
 
 import { h } from './vdom.js'
 import { defineComponent } from './component.js'
@@ -66,7 +54,7 @@ export const VirtualList = defineComponent({
         style: { height: `${height}px`, overflowY: 'auto', position: 'relative' },
         on: { scroll: (_event, el) => setState({ scrollTop: el.scrollTop }) },
       },
-      // The spacer has the full height so the scrollbar looks right.
+      // Spacer with the full height, for the scrollbar.
       h('div', { style: { height: `${items.length * itemHeight}px`, position: 'relative' } }, rows),
     )
   },
