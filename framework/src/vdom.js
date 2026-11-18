@@ -67,7 +67,7 @@ function normalizeChildren(children, out = []) {
   return out
 }
 
-function toComponentDef(tag) {
+export function toComponentDef(tag) {
   if (typeof tag === 'function') {
     let def = functionComponents.get(tag)
     if (!def) {

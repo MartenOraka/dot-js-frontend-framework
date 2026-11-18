@@ -4,6 +4,8 @@ import { test, assert, assertEqual, sandbox } from './harness.js'
 import {
   h, fragment, render, defineComponent, createApp, createStore, nextTick, VirtualList,
 } from '../src/index.js'
+import { longestIncreasingSubsequence } from '../src/render.js'
+import { measureBatching, measureReorder } from '../playground/measure.js'
 
 // --- h() and mounting ---
 
@@ -236,6 +238,14 @@ test('createApp renders the root component and re-renders on store changes', asy
   assertEqual(root.innerHTML, '')
 })
 
+test('createApp accepts a plain function as the root component', () => {
+  const root = sandbox()
+  const App = () => h('p', 'function root')
+  const app = createApp({ root, component: App }).mount()
+  assertEqual(root.textContent, 'function root')
+  app.unmount()
+})
+
 // --- VirtualList ---
 
 test('VirtualList only renders visible rows and follows scrolling', async () => {
@@ -256,4 +266,61 @@ test('VirtualList only renders visible rows and follows scrolling', async () => 
   assert(texts.includes('Item 5000'), `Item 5000 should be visible, got ${texts[0]}…`)
   assert(rows().length <= 14, 'still only a few rows')
   root.remove()
+})
+
+// --- Performance claims (numbers shown in playground/performance.html) ---
+
+test('batching: 1000 setState calls render once; without batching 1000 times', async () => {
+  const container = sandbox()
+  const batched = await measureBatching({ container, batched: true })
+  const unbatched = await measureBatching({ container, batched: false })
+  assertEqual(batched.renders, 1)
+  assertEqual(unbatched.renders, 1000)
+  assertEqual(batched.shown, 'Row 0: 1000', 'batched result')
+  assertEqual(unbatched.shown, 'Row 0: 1000', 'unbatched result')
+})
+
+test('keyed list: moving the last item to the top moves 1 element and rewrites nothing', () => {
+  const r = measureReorder({ container: sandbox(), keyed: true, operation: 'moveLastToTop' })
+  assertEqual([r.correct, r.created, r.moved, r.textChanged, r.ticksKept], [true, 0, 1, 0, 100])
+})
+
+test('keyed list: reversing moves elements, creates none, keeps checkbox state', () => {
+  const r = measureReorder({ container: sandbox(), keyed: true, operation: 'reverse' })
+  assertEqual([r.correct, r.created, r.moved, r.textChanged, r.ticksKept], [true, 0, 999, 0, 100])
+})
+
+test('unkeyed list: same reorder rewrites every row and checkboxes end up on the wrong items', () => {
+  const r = measureReorder({ container: sandbox(), keyed: false, operation: 'moveLastToTop' })
+  assertEqual([r.correct, r.created, r.moved, r.textChanged, r.ticksKept], [true, 0, 0, 1000, 0])
+})
+
+test('longestIncreasingSubsequence picks the nodes that can stay', () => {
+  assertEqual([...longestIncreasingSubsequence([3, 0, 1, 2])].sort(), [1, 2, 3])
+  assertEqual([...longestIncreasingSubsequence([0, 1, 2])].sort(), [0, 1, 2])
+  assertEqual(longestIncreasingSubsequence([2, 1, 0]).size, 1)
+  assertEqual([...longestIncreasingSubsequence([-1, 0, -1, 1])].sort(), [1, 3])
+  assertEqual(longestIncreasingSubsequence([]).size, 0)
+})
+
+test('keyed lists stay correct over 200 random shuffles, inserts and removals', () => {
+  const root = sandbox()
+  let seed = 42
+  const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+  const view = (ids) => h('ul', ids.map((id) => h('li', { key: id }, String(id))))
+  let ids = Array.from({ length: 30 }, (_, i) => i)
+  let nextId = 30
+  render(view(ids), root)
+  for (let round = 0; round < 200; round++) {
+    const before = new Map([...root.querySelectorAll('li')].map((li) => [li.textContent, li]))
+    ids = ids.filter(() => random() > 0.1)
+    while (random() < 0.3) ids.splice(Math.floor(random() * (ids.length + 1)), 0, nextId++)
+    ids.sort(() => random() - 0.5)
+    render(view(ids), root)
+    const items = [...root.querySelectorAll('li')]
+    assertEqual(items.map((li) => li.textContent), ids.map(String), `round ${round}`)
+    items.forEach((li) => {
+      if (before.has(li.textContent)) assert(before.get(li.textContent) === li, `round ${round}: node reused`)
+    })
+  }
 })

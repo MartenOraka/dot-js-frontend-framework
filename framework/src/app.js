@@ -2,7 +2,7 @@
 // createApp({ root, routes or component, store }).mount()
 // The framework calls your code and re-renders on changes.
 
-import { h } from './vdom.js'
+import { h, toComponentDef } from './vdom.js'
 import { defineComponent, ComponentInstance } from './component.js'
 import { scheduleUpdate, flushMountHooks } from './scheduler.js'
 import * as events from './events.js'
@@ -29,7 +29,7 @@ export function createApp(options = {}) {
   const store = options.store || createStore({})
   const router = routes ? createRouter({ routes, store, ...routerOptions }) : null
   const context = { store, router }
-  const RootComponent = component || RouterView
+  const RootComponent = component ? toComponentDef(component) : RouterView
 
   let rootEl = null
   let instance = null

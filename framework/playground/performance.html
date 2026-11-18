@@ -2,14 +2,18 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Performance demo: VirtualList</title>
+    <title>Performance demos</title>
     <style>
-      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 900px; }
-      .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+      body { font-family: system-ui, sans-serif; margin: 2rem; max-width: 960px; }
+      section { margin-bottom: 3rem; }
       .list { border: 1px solid #d0d7de; border-radius: 6px; }
       .row { padding: 0 .75rem; line-height: 32px; border-bottom: 1px solid #eee; }
+      .stage { height: 200px; overflow: auto; border: 1px solid #d0d7de; border-radius: 6px; font-size: .85rem; }
+      .stage ul { margin: 0; padding: .25rem 1.5rem; }
       table { border-collapse: collapse; margin: 1rem 0; }
       td, th { border: 1px solid #d0d7de; padding: .3rem .75rem; text-align: left; }
+      .good { color: #1a7f37; font-weight: 600; }
+      .bad { color: #cf222e; font-weight: 600; }
       button { margin-right: .5rem; }
     </style>
   </head>
@@ -17,32 +21,122 @@
     <div id="app"></div>
     <script type="module">
       import { h, defineComponent, createApp, nextTick, VirtualList } from '../src/index.js'
+      import { measureBatching, measureReorder } from './measure.js'
 
+      const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()))
+      const ms = (n) => `${n < 10 ? n.toFixed(1) : Math.round(n)} ms`
+      const stage = { current: null }
+      const RUNS = 5
+
+      // Runs a measurement RUNS times and keeps the run with the median time,
+      // so one slow run (e.g. the first, before the browser has optimised
+      // the code) does not distort the result.
+      async function median(measure) {
+        const runs = []
+        for (let i = 0; i < RUNS; i++) runs.push(await measure())
+        runs.sort((a, b) => a.ms - b.ms)
+        return runs[Math.floor(RUNS / 2)]
+      }
+
+      // --- 1. Batching ---
+      const BatchingDemo = defineComponent({
+        name: 'BatchingDemo',
+        state: () => ({ results: {}, running: false }),
+        render({ state, setState }) {
+          async function run() {
+            setState({ running: true })
+            await nextTick()
+            const results = {}
+            for (const batched of [true, false]) {
+              results[batched] = await median(() => measureBatching({ container: stage.current, batched }))
+            }
+            setState({ results, running: false })
+          }
+          const r = state.results
+          return h('section', null,
+            h('h2', '1. Batching: 1,000 setState calls'),
+            h('p', 'A component with 100 rows calls setState 1,000 times in a row. With batching the framework waits until the next frame and renders once. Without batching (simulated by flushing after every call) it renders after every call.'),
+            h('button', { disabled: state.running, on: { click: run } }, state.running ? 'Running…' : 'Run'),
+            h('table', null,
+              h('tr', null, h('th', 'Mode'), h('th', 'setState calls'), h('th', 'Renders'), h('th', 'Time'), h('th', 'Final value')),
+              [true, false].map((batched) => {
+                const x = r[batched]
+                return h('tr', { key: String(batched) },
+                  h('td', batched ? 'With batching (default)' : 'Without batching'),
+                  h('td', x ? x.calls.toLocaleString() : '—'),
+                  h('td', { class: x && (batched ? 'good' : 'bad') }, x ? x.renders.toLocaleString() : '—'),
+                  h('td', x ? ms(x.ms) : '—'),
+                  h('td', x ? x.shown : '—'))
+              })),
+          )
+        },
+      })
+
+      // --- 2. Keyed diffing ---
+      const OPERATIONS = { moveLastToTop: 'Move last item to the top', reverse: 'Reverse the list' }
+
+      const KeyedDemo = defineComponent({
+        name: 'KeyedDemo',
+        state: () => ({ operation: 'moveLastToTop', results: {} }),
+        render({ state, setState }) {
+          async function run(operation) {
+            const results = {}
+            for (const keyed of [true, false]) {
+              results[keyed] = await median(() => measureReorder({ container: stage.current, keyed, operation }))
+            }
+            setState({ operation, results })
+          }
+          const r = state.results
+          const cell = (value, goodWhen) =>
+            h('td', { class: value === undefined ? null : goodWhen(value) ? 'good' : 'bad' },
+              value === undefined ? '—' : value.toLocaleString())
+          return h('section', null,
+            h('h2', '2. Keyed vs unkeyed lists: reordering 1,000 items'),
+            h('p', 'Each row has a checkbox; every 10th one is ticked before the reorder. The ticks live only in the DOM, so they show whether each element still belongs to the same item afterwards. Counts come from a MutationObserver.'),
+            Object.entries(OPERATIONS).map(([op, label]) =>
+              h('button', { key: op, on: { click: () => run(op) } }, label)),
+            h('table', null,
+              h('tr', null, h('th', OPERATIONS[state.operation]), h('th', 'Elements created'), h('th', 'Elements moved'),
+                h('th', 'Text nodes rewritten'), h('th', 'Ticks still on the right item'), h('th', 'Time')),
+              [true, false].map((keyed) => {
+                const x = r[keyed] || {}
+                return h('tr', { key: String(keyed) },
+                  h('td', keyed ? 'With keys' : 'Without keys'),
+                  cell(x.created, (v) => v === 0),
+                  h('td', x.moved === undefined ? '—' : x.moved.toLocaleString()),
+                  cell(x.textChanged, (v) => v === 0),
+                  h('td', { class: x.ticked ? (x.ticksKept === x.ticked ? 'good' : 'bad') : null },
+                    x.ticked ? `${x.ticksKept} / ${x.ticked}` : '—'),
+                  h('td', x.ms === undefined ? '—' : ms(x.ms)))
+              })),
+            h('p', 'With keys the renderer moves existing elements and keeps the longest run that is already in order in place, so "move last to top" is a single move. Without keys it reuses elements by position and rewrites their text, so the ticks stay at their old positions and end up on the wrong items.'),
+          )
+        },
+      })
+
+      // --- 3. VirtualList ---
       const COUNT = 10000
       const ITEM_HEIGHT = 33
       const items = Array.from({ length: COUNT }, (_, i) => ({ id: i, label: `Row #${i}` }))
       const row = (item) => h('div', { class: 'row' }, item.label)
-      const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()))
 
-      const Demo = defineComponent({
-        name: 'PerformanceDemo',
+      const VirtualListDemo = defineComponent({
+        name: 'VirtualListDemo',
         state: () => ({ mode: null, results: {} }),
-
         render({ state, setState }) {
           async function run(mode) {
             setState({ mode: null })
             await nextTick()
             const start = performance.now()
             setState({ mode })
-            await nextTick() // framework has rendered
-            await nextFrame() // browser has done layout and paint
-            const ms = Math.round(performance.now() - start)
+            await nextTick()
+            await nextFrame()
+            const time = performance.now() - start
             const nodes = document.querySelectorAll('#app .row').length
-            setState((s) => ({ results: { ...s.results, [mode]: { ms, nodes } } }))
+            setState((s) => ({ results: { ...s.results, [mode]: { time, nodes } } }))
           }
-
           const result = (mode) => state.results[mode]
-          let list = h('p', 'Pick a mode above.')
+          let list = null
           if (state.mode === 'plain') {
             list = h('div', { class: 'list', style: { height: '400px', overflowY: 'auto' } },
               items.map((item) => h('div', { key: item.id, style: { height: `${ITEM_HEIGHT}px` } }, row(item))))
@@ -50,10 +144,9 @@
             list = h(VirtualList, { class: 'list', items, itemHeight: ITEM_HEIGHT, height: 400,
               renderItem: row, getKey: (item) => item.id })
           }
-
-          return h('main', null,
-            h('h1', `Rendering ${COUNT.toLocaleString()} rows`),
-            h('p', 'Both modes show the same list. The plain list creates every row; VirtualList only creates the rows in view and swaps them while you scroll. Open DevTools → Performance to compare scrolling too.'),
+          return h('section', null,
+            h('h2', `3. VirtualList: ${COUNT.toLocaleString()} rows`),
+            h('p', 'Both modes show the same list. The plain list creates every row; VirtualList only creates the rows in view and swaps them while you scroll.'),
             h('button', { on: { click: () => run('plain') } }, 'Plain list'),
             h('button', { on: { click: () => run('virtual') } }, 'VirtualList'),
             h('table', null,
@@ -61,14 +154,25 @@
               ['plain', 'virtual'].map((mode) =>
                 h('tr', { key: mode },
                   h('td', mode === 'plain' ? 'Plain list' : 'VirtualList'),
-                  h('td', result(mode) ? `${result(mode).ms} ms` : '—'),
+                  h('td', result(mode) ? ms(result(mode).time) : '—'),
                   h('td', result(mode) ? result(mode).nodes.toLocaleString() : '—')))),
             list,
           )
         },
       })
 
-      createApp({ root: '#app', component: Demo }).mount()
+      const App = () =>
+        h('main', null,
+          h('h1', 'Performance demos'),
+          h('p', 'Each demo measures one optimisation by running the same work with it and without it. Demos 1 and 2 run every measurement 5 times and show the median. The same measurements run as tests in /framework/tests/.'),
+          h('h3', 'Measurement area (demos 1 and 2 render here)'),
+          h('div', { class: 'stage', ref: stage }),
+          h(BatchingDemo),
+          h(KeyedDemo),
+          h(VirtualListDemo),
+        )
+
+      createApp({ root: '#app', component: App }).mount()
     </script>
   </body>
 </html>

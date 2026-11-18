@@ -188,19 +188,46 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   // 2. Remove unused old nodes.
   for (const child of oldCh) if (!used.has(child)) unmount(child)
 
-  // 3. Put nodes in order (backwards).
+  // 3. Keep the longest run of nodes that are already in order, so as few
+  //    nodes as possible are moved (moving the last item to the top = 1 move).
+  const oldIndex = new Map(oldCh.map((child, i) => [child, i]))
+  const stay = longestIncreasingSubsequence(matches.map((m) => (m ? oldIndex.get(m) : -1)))
+
+  // 4. Move or mount the rest (backwards, each before the node after it).
   let anchor = endAnchor
   for (let i = newCh.length - 1; i >= 0; i--) {
     const child = newCh[i]
-    if (matches[i]) {
-      if (lastNode(child).nextSibling !== anchor) {
-        for (const node of domNodes(child)) parentEl.insertBefore(node, anchor)
-      }
-    } else {
-      mount(child, parentEl, anchor, app)
-    }
+    if (!matches[i]) mount(child, parentEl, anchor, app)
+    else if (!stay.has(i)) for (const node of domNodes(child)) parentEl.insertBefore(node, anchor)
     anchor = firstNode(child)
   }
+}
+
+// Positions in `arr` that form the longest increasing run (-1 = skip).
+// [3, 0, 1, 2] -> {1, 2, 3}: keep those three, move only the first.
+export function longestIncreasingSubsequence(arr) {
+  const prev = new Array(arr.length)
+  const ends = [] // ends[k] = position of the smallest tail of a run of length k+1
+  for (let i = 0; i < arr.length; i++) {
+    const value = arr[i]
+    if (value < 0) continue
+    let lo = 0
+    let hi = ends.length
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1
+      if (arr[ends[mid]] < value) lo = mid + 1
+      else hi = mid
+    }
+    prev[i] = lo > 0 ? ends[lo - 1] : -1
+    ends[lo] = i
+  }
+  const result = new Set()
+  let i = ends.length ? ends[ends.length - 1] : -1
+  while (i >= 0) {
+    result.add(i)
+    i = prev[i]
+  }
+  return result
 }
 
 // --- Props, class and style ---
