@@ -1,6 +1,4 @@
-// Person A
-// defineComponent({ state, render, onMount, onUnmount })
-// Plain functions work too: ({ props }) => h('p', props.name)
+// Person A: components
 
 import { toVNode } from './vdom.js'
 import { mount, patch, unmount, firstNode } from './render.js'
@@ -16,11 +14,9 @@ export function defineComponent(options) {
   return { name: 'Component', ...options, __isComponent: true }
 }
 
-// Component being rendered right now (used for depth).
 let current = null
 
 export class ComponentInstance {
-  // def: from defineComponent, app: { store, router }
   constructor(def, props, app = {}) {
     this.def = def
     this.props = props
@@ -33,7 +29,6 @@ export class ComponentInstance {
     this.setState = this.setState.bind(this)
   }
 
-  // Merge state and re-render.
   setState(partial) {
     const next = typeof partial === 'function' ? partial(this.state, this.props) : partial
     if (next == null) return
@@ -44,7 +39,6 @@ export class ComponentInstance {
     }
   }
 
-  // What render() and hooks receive.
   context() {
     return {
       props: this.props,
@@ -80,7 +74,6 @@ export class ComponentInstance {
     if (this.def.onMount) queueMountHook(() => this.mounted && this.def.onMount(this.context()))
   }
 
-  // Re-render and update the DOM.
   update() {
     if (!this.mounted) return
     this.dirty = false
@@ -97,7 +90,6 @@ export class ComponentInstance {
     }
   }
 
-  // Parent passed new props.
   updateProps(props) {
     this.props = props
     this.update()

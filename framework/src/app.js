@@ -1,6 +1,4 @@
-// Person A
-// createApp({ root, routes or component, store }).mount()
-// The framework calls your code and re-renders on changes.
+// Person A: createApp
 
 import { h, toComponentDef } from './vdom.js'
 import { defineComponent, ComponentInstance } from './component.js'
@@ -9,7 +7,6 @@ import * as events from './events.js'
 import { createStore } from './store.js'
 import { createRouter } from './router.js'
 
-// Shows the page for the current URL.
 export const RouterView = defineComponent({
   name: 'RouterView',
   render({ router }) {
@@ -20,7 +17,6 @@ export const RouterView = defineComponent({
   },
 })
 
-// options: root, component or routes, store, routerOptions
 export function createApp(options = {}) {
   const { root, component, routes, routerOptions = {} } = options
   if (!root) throw new Error('createApp(): "root" is required')
@@ -52,7 +48,6 @@ export function createApp(options = {}) {
       instance.mount(rootEl, null)
       flushMountHooks()
 
-      // Re-render on any store change (route changes too).
       unsubscribe = store.subscribe(() => {
         instance.dirty = true
         scheduleUpdate(instance)

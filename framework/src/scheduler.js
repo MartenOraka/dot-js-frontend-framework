@@ -1,5 +1,4 @@
-// Person A
-// Batches updates into one render per frame and runs onMount hooks.
+// Person A: one render per frame
 
 const raf =
   typeof requestAnimationFrame === 'function'
@@ -8,15 +7,13 @@ const raf =
 
 const queue = new Set()
 let scheduled = false
-let waiting = [] // nextTick() promises
+let waiting = []
 
-// Queue a component to re-render before the next frame.
 export function scheduleUpdate(job) {
   queue.add(job)
   requestFlush()
 }
 
-// Resolves after pending updates have rendered.
 export function nextTick() {
   return new Promise((resolve) => {
     waiting.push(resolve)
@@ -31,10 +28,9 @@ function requestFlush() {
   }
 }
 
-// Run all queued updates.
 export function flush() {
   scheduled = false
-  // Parents first, so children don't render twice.
+  // parents first
   const jobs = [...queue].sort((a, b) => a.depth - b.depth)
   queue.clear()
   for (const job of jobs) {
@@ -45,8 +41,6 @@ export function flush() {
   waiting = []
   resolvers.forEach((resolve) => resolve())
 }
-
-// onMount hooks run once the DOM is in the page.
 
 const mountHooks = []
 

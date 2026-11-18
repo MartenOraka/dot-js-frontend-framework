@@ -1,6 +1,4 @@
-// Person A
-// h() creates vnodes: plain objects that describe the UI.
-// Types: text, element, fragment, component.
+// Person A: virtual DOM
 
 export const TEXT = 'text'
 export const ELEMENT = 'element'
@@ -9,13 +7,11 @@ export const COMPONENT = 'component'
 
 const VNODE = Symbol('vnode')
 
-// Same function -> same component definition.
 const functionComponents = new WeakMap()
 
 // h(tag, props, ...children)
-// h('div', { class: 'card' }, 'Hi')   h('p', 'text')   h(Item, { key: 1 })
 export function h(tag, props, ...children) {
-  // props skipped: h('p', 'text')
+  // h('p', 'text')
   if (props != null && (typeof props !== 'object' || Array.isArray(props) || isVNode(props))) {
     children.unshift(props)
     props = null
@@ -33,14 +29,11 @@ export function h(tag, props, ...children) {
   return makeVNode(ELEMENT, tag, rest, kids, key)
 }
 
-// Siblings without a wrapper element.
 export function fragment(...children) {
   const kids = normalizeChildren(children)
-  // Empty fragment gets an empty text node.
   return makeVNode(FRAGMENT, null, {}, kids.length ? kids : [text('')], null)
 }
 
-// Text vnode.
 export function text(value) {
   return makeVNode(TEXT, null, {}, [], null, String(value))
 }
@@ -49,7 +42,6 @@ export function isVNode(value) {
   return value != null && value[VNODE] === true
 }
 
-// Any render result -> one vnode (null -> empty text, array -> fragment).
 export function toVNode(value) {
   if (isVNode(value)) return value
   if (value == null || value === false || value === true) return text('')
@@ -86,12 +78,12 @@ function makeVNode(type, tag, props, children, key, value = null) {
   return {
     [VNODE]: true,
     type,
-    tag, // tag name or component
+    tag,
     props,
     children,
     key,
-    value, // text only
-    el: null, // real DOM node
-    instance: null, // component only
+    value,
+    el: null,
+    instance: null,
   }
 }

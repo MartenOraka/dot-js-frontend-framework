@@ -268,7 +268,7 @@ test('VirtualList only renders visible rows and follows scrolling', async () => 
   root.remove()
 })
 
-// --- Performance claims (numbers shown in playground/performance.html) ---
+// --- Performance ---
 
 test('batching: 1000 setState calls render once; without batching 1000 times', async () => {
   const container = sandbox()

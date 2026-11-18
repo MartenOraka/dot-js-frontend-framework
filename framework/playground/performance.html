@@ -28,9 +28,7 @@
       const stage = { current: null }
       const RUNS = 5
 
-      // Runs a measurement RUNS times and keeps the run with the median time,
-      // so one slow run (e.g. the first, before the browser has optimised
-      // the code) does not distort the result.
+      // median of RUNS runs
       async function median(measure) {
         const runs = []
         for (let i = 0; i < RUNS; i++) runs.push(await measure())
@@ -38,7 +36,7 @@
         return runs[Math.floor(RUNS / 2)]
       }
 
-      // --- 1. Batching ---
+      // 1. Batching
       const BatchingDemo = defineComponent({
         name: 'BatchingDemo',
         state: () => ({ results: {}, running: false }),
@@ -72,7 +70,7 @@
         },
       })
 
-      // --- 2. Keyed diffing ---
+      // 2. Keyed diffing
       const OPERATIONS = { moveLastToTop: 'Move last item to the top', reverse: 'Reverse the list' }
 
       const KeyedDemo = defineComponent({
@@ -114,7 +112,7 @@
         },
       })
 
-      // --- 3. VirtualList ---
+      // 3. VirtualList
       const COUNT = 10000
       const ITEM_HEIGHT = 33
       const items = Array.from({ length: COUNT }, (_, i) => ({ id: i, label: `Row #${i}` }))

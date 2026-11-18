@@ -1,13 +1,9 @@
-// Person A
-// Measurements used by performance.html and by the tests.
+// Person A: measurements for performance.html and tests
 
 import { h, render, defineComponent, nextTick } from '../src/index.js'
 import { flush } from '../src/scheduler.js'
 
-// --- Batching ---
-// Calls setState `calls` times on a component that shows `rows` rows.
-// batched: the normal framework behaviour (one render per frame).
-// not batched: flush() after every call, so each call renders right away.
+// Batching: many setState calls, with or without flush() after each
 export async function measureBatching({ container, batched, calls = 1000, rows = 100 }) {
   render(null, container)
   let renders = 0
@@ -24,27 +20,23 @@ export async function measureBatching({ container, batched, calls = 1000, rows =
   })
 
   render(h(Target), container)
-  container.offsetHeight // finish layout of the first render before timing
+  container.offsetHeight // layout before timing
   renders = 0
 
-  // Timed without waiting for the next frame: in batched mode the one
-  // queued render is run by flush(), exactly what the frame would do.
   const start = performance.now()
   for (let i = 0; i < calls; i++) {
     setCount((s) => ({ count: s.count + 1 }))
     if (!batched) flush()
   }
   if (batched) flush()
-  container.offsetHeight // include layout
+  container.offsetHeight
   const ms = performance.now() - start
   await nextTick()
 
   return { calls, renders, ms, shown: container.querySelector('li').textContent }
 }
 
-// --- Keyed vs unkeyed lists ---
-// Renders `size` rows, ticks every 10th checkbox (state only the DOM knows),
-// reorders the list and counts what the renderer did to the DOM.
+// Keyed vs unkeyed: reorder a list, count DOM changes
 export function measureReorder({ container, keyed, operation, size = 1000 }) {
   render(null, container)
   const items = Array.from({ length: size }, (_, i) => ({ id: i, label: `Item ${i}` }))
@@ -66,12 +58,12 @@ export function measureReorder({ container, keyed, operation, size = 1000 }) {
   const next =
     operation === 'reverse' ? [...items].reverse() : [items[size - 1], ...items.slice(0, -1)]
 
-  ul.offsetHeight // finish layout of the first render before timing
+  ul.offsetHeight // layout before timing
   const observer = new MutationObserver(() => {})
   observer.observe(ul, { childList: true, subtree: true, characterData: true })
   const start = performance.now()
   render(view(next), container)
-  ul.offsetHeight // include layout
+  ul.offsetHeight
   const ms = performance.now() - start
   const records = observer.takeRecords()
   observer.disconnect()

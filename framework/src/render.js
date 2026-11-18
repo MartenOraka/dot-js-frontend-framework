@@ -1,6 +1,4 @@
-// Person A
-// mount: vnode -> DOM, patch: update DOM, unmount: remove.
-// Listeners are handled by events.js (Person B).
+// Person A: renderer
 
 import { TEXT, ELEMENT, FRAGMENT, COMPONENT, isVNode } from './vdom.js'
 import { ComponentInstance } from './component.js'
@@ -9,12 +7,9 @@ import * as events from './events.js'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-// Set as DOM properties so inputs stay in sync.
 const DOM_PROPS = new Set(['value', 'checked', 'selected', 'indeterminate', 'muted'])
 
-// render(vnode, container): use without createApp.
-
-const rendered = new WeakMap() // container -> last vnode
+const rendered = new WeakMap()
 const initialisedRoots = new WeakSet()
 
 export function render(vnode, container, appContext = {}) {
@@ -37,7 +32,6 @@ export function render(vnode, container, appContext = {}) {
 
 // --- Mount ---
 
-// Create DOM for vnode, insert before anchor.
 export function mount(vnode, parentEl, anchor, app) {
   switch (vnode.type) {
     case TEXT: {
@@ -49,7 +43,7 @@ export function mount(vnode, parentEl, anchor, app) {
       const el = createElement(vnode.tag, parentEl)
       vnode.el = el
       for (const child of vnode.children) mount(child, el, null, app)
-      // Props after children so <select value> works.
+      // after children, for <select>
       setProps(el, {}, vnode.props)
       parentEl.insertBefore(el, anchor)
       if (vnode.props.on) events.attach(el, vnode.props.on)
@@ -80,7 +74,6 @@ function createElement(tag, parentEl) {
 
 // --- Unmount ---
 
-// Remove a vnode, its listeners and components.
 export function unmount(vnode, remove = true) {
   switch (vnode.type) {
     case TEXT:
@@ -107,12 +100,10 @@ function sameNode(a, b) {
   return a.type === b.type && a.tag === b.tag && a.key === b.key
 }
 
-// Update oldV's DOM to match newV.
 export function patch(oldV, newV, parentEl, app) {
   if (oldV === newV) return
 
   if (!sameNode(oldV, newV)) {
-    // Different node: replace it.
     mount(newV, parentEl, firstNode(oldV), app)
     unmount(oldV)
     return
@@ -152,7 +143,6 @@ export function patch(oldV, newV, parentEl, app) {
   }
 }
 
-// Update a list of children: keyed ones match by key, the rest by position.
 function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   const oldByKey = new Map()
   const oldUnkeyed = []
@@ -166,7 +156,7 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   const matches = new Array(newCh.length).fill(null)
   let unkeyedIndex = 0
 
-  // 1. Match and patch.
+  // 1. match
   newCh.forEach((child, i) => {
     let match = null
     if (child.key != null) {
@@ -185,15 +175,14 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
     }
   })
 
-  // 2. Remove unused old nodes.
+  // 2. remove
   for (const child of oldCh) if (!used.has(child)) unmount(child)
 
-  // 3. Keep the longest run of nodes that are already in order, so as few
-  //    nodes as possible are moved (moving the last item to the top = 1 move).
+  // 3. keep in-order nodes
   const oldIndex = new Map(oldCh.map((child, i) => [child, i]))
   const stay = longestIncreasingSubsequence(matches.map((m) => (m ? oldIndex.get(m) : -1)))
 
-  // 4. Move or mount the rest (backwards, each before the node after it).
+  // 4. move or mount
   let anchor = endAnchor
   for (let i = newCh.length - 1; i >= 0; i--) {
     const child = newCh[i]
@@ -203,11 +192,10 @@ function patchChildren(oldCh, newCh, parentEl, endAnchor, app) {
   }
 }
 
-// Positions in `arr` that form the longest increasing run (-1 = skip).
-// [3, 0, 1, 2] -> {1, 2, 3}: keep those three, move only the first.
+// [3, 0, 1, 2] -> {1, 2, 3}
 export function longestIncreasingSubsequence(arr) {
   const prev = new Array(arr.length)
-  const ends = [] // ends[k] = position of the smallest tail of a run of length k+1
+  const ends = []
   for (let i = 0; i < arr.length; i++) {
     const value = arr[i]
     if (value < 0) continue
@@ -244,7 +232,6 @@ function setProps(el, oldProps, newProps) {
   }
 }
 
-// Not real attributes.
 function isSpecial(name) {
   return name === 'on' || name === 'ref' || name === 'key' || name === 'children'
 }
@@ -257,7 +244,6 @@ function setProp(el, name, oldValue, value) {
   } else if (name === 'style') {
     setStyle(el, oldValue, value)
   } else if (DOM_PROPS.has(name)) {
-    // Compare with the live value (user may have typed).
     const next = name === 'value' ? (value == null ? '' : String(value)) : Boolean(value)
     if (el[name] !== next) el[name] = next
   } else if (value == null || value === false) {
@@ -269,7 +255,6 @@ function setProp(el, name, oldValue, value) {
   }
 }
 
-// class: string, array or object
 export function classString(value) {
   if (!value) return ''
   if (typeof value === 'string') return value
@@ -282,7 +267,6 @@ export function classString(value) {
   return String(value)
 }
 
-// style: string or object
 function setStyle(el, oldStyle, newStyle) {
   if (typeof newStyle === 'string' || newStyle == null) {
     el.style.cssText = newStyle || ''
@@ -310,7 +294,7 @@ function setRef(ref, el) {
   else if (typeof ref === 'object') ref.current = el
 }
 
-// --- DOM nodes owned by a vnode ---
+// --- Helpers ---
 
 export function domNodes(vnode) {
   switch (vnode.type) {

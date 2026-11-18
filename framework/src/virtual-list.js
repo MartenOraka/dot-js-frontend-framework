@@ -1,6 +1,4 @@
-// Person A
-// Only renders the rows in view: 10 000 items -> about 20 elements.
-// h(VirtualList, { items, itemHeight, height, renderItem, getKey, overscan })
+// Person A: renders only visible rows
 
 import { h } from './vdom.js'
 import { defineComponent } from './component.js'
@@ -54,7 +52,6 @@ export const VirtualList = defineComponent({
         style: { height: `${height}px`, overflowY: 'auto', position: 'relative' },
         on: { scroll: (_event, el) => setState({ scrollTop: el.scrollTop }) },
       },
-      // Spacer with the full height, for the scrollbar.
       h('div', { style: { height: `${items.length * itemHeight}px`, position: 'relative' } }, rows),
     )
   },
