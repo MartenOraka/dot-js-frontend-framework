@@ -57,7 +57,6 @@ test('value and checked are DOM properties', () => {
   render(h('input', { value: 'b' }), root)
   assertEqual(input.value, 'b')
   render(h('input', { type: 'checkbox', checked: true }), root)
-  // same element is reused
   assert(root.firstChild.checked, 'should be checked')
 })
 
@@ -82,7 +81,7 @@ test('ref receives the element and null on unmount', () => {
   assertEqual(ref.current, null)
 })
 
-// --- events (through events.js) ---
+// --- events ---
 
 test('on: listeners are attached, updated and removed', () => {
   const root = sandbox()
@@ -158,7 +157,6 @@ const Counter = defineComponent({
   name: 'Counter',
   state: (props) => ({ count: props.start || 0 }),
   render({ props, state, setState }) {
-    // Function form, so two quick clicks both count.
     return h('button', { on: { click: () => setState((s) => ({ count: s.count + 1 })) } }, `${props.label}:${state.count}`)
   },
 })
@@ -216,7 +214,7 @@ test('keyed components are moved, not re-created', async () => {
   const root = sandbox()
   const ids = ['a', 'b', 'c']
   render(h('div', null, ids.map((id) => h(Counter, { key: id, label: id }))), root)
-  root.querySelectorAll('button')[2].click() // c -> 1
+  root.querySelectorAll('button')[2].click()
   await nextTick()
   render(h('div', null, ['c', 'a', 'b'].map((id) => h(Counter, { key: id, label: id }))), root)
   assertEqual(root.textContent, 'c:1a:0b:0')
@@ -251,7 +249,7 @@ test('createApp accepts a plain function as the root component', () => {
 test('VirtualList only renders visible rows and follows scrolling', async () => {
   const root = sandbox()
   root.style.cssText = 'position: static'
-  document.body.appendChild(root) // must be laid out to scroll
+  document.body.appendChild(root)
   const items = Array.from({ length: 10000 }, (_, i) => `Item ${i}`)
   render(h(VirtualList, { items, itemHeight: 20, height: 200, overscan: 2 }), root)
   const rows = () => root.querySelectorAll('.vlist-row')

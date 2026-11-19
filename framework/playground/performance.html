@@ -28,7 +28,7 @@
       const stage = { current: null }
       const RUNS = 5
 
-      // median of RUNS runs
+      // median
       async function median(measure) {
         const runs = []
         for (let i = 0; i < RUNS; i++) runs.push(await measure())

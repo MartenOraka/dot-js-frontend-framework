@@ -1,9 +1,9 @@
-// Person A: measurements for performance.html and tests
+// Person A: measurements
 
 import { h, render, defineComponent, nextTick } from '../src/index.js'
 import { flush } from '../src/scheduler.js'
 
-// Batching: many setState calls, with or without flush() after each
+// Batching
 export async function measureBatching({ container, batched, calls = 1000, rows = 100 }) {
   render(null, container)
   let renders = 0
@@ -20,7 +20,7 @@ export async function measureBatching({ container, batched, calls = 1000, rows =
   })
 
   render(h(Target), container)
-  container.offsetHeight // layout before timing
+  container.offsetHeight
   renders = 0
 
   const start = performance.now()
@@ -36,7 +36,7 @@ export async function measureBatching({ container, batched, calls = 1000, rows =
   return { calls, renders, ms, shown: container.querySelector('li').textContent }
 }
 
-// Keyed vs unkeyed: reorder a list, count DOM changes
+// Keyed vs unkeyed
 export function measureReorder({ container, keyed, operation, size = 1000 }) {
   render(null, container)
   const items = Array.from({ length: size }, (_, i) => ({ id: i, label: `Item ${i}` }))
@@ -58,7 +58,7 @@ export function measureReorder({ container, keyed, operation, size = 1000 }) {
   const next =
     operation === 'reverse' ? [...items].reverse() : [items[size - 1], ...items.slice(0, -1)]
 
-  ul.offsetHeight // layout before timing
+  ul.offsetHeight
   const observer = new MutationObserver(() => {})
   observer.observe(ul, { childList: true, subtree: true, characterData: true })
   const start = performance.now()
